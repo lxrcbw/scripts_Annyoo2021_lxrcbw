@@ -26,9 +26,6 @@
 # 头文子J
 7 0,9 * * * node /scripts/jd_mpdzcar.js >> /scripts/logs/jd_mpdzcar.log 2>&1
 
-# 城城领现金
-3 0,5,9,13,17,22 9-21 1 * node /scripts/jd_city.js >> /scripts/logs/jd_city.log 2>&1
-
 # 京东特价 翻翻乐
 32 0,6-23 * * * node /scripts/jd_jdtj_winner.js >> /scripts/logs/jd_jdtj_winner.log 2>&1
 
