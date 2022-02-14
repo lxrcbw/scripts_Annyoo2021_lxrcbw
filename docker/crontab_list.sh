@@ -36,13 +36,13 @@
 # 1 0,9,15,21 * * * node /scripts/jd_jump.js >> /scripts/logs/jd_jump.log 2>&1
 
 # 金榜年终奖
-3 1,5 * * * node /scripts/jd_split.js >> /scripts/logs/jd_split.log 2>&1
+#3 1,5 * * * node /scripts/jd_split.js >> /scripts/logs/jd_split.log 2>&1
 
 # 发财大赢家之翻翻乐 (没看什么时候结束)
-20,40 * * * * node /scripts/jd_big_winner.js >> /scripts/logs/jd_big_winner.log 2>&1
+# 20,40 * * * * node /scripts/jd_big_winner.js >> /scripts/logs/jd_big_winner.log 2>&1
 
 # 京喜领88元红包(9.30结束)
-0 0,12,21 * * * node /scripts/jd_jxlhb.js >> /scripts/logs/jd_jxlhb.log 2>&1
+# 0 0,12,21 * * * node /scripts/jd_jxlhb.js >> /scripts/logs/jd_jxlhb.log 2>&1
 
 # 内容鉴赏官 (9.30 结束，10月继续开启)
 11 1,5 * * * node /scripts/jd_connoisseur.js >> /scripts/logs/jd_connoisseur.log 2>&1
@@ -76,9 +76,6 @@
 
 # 京东零食街 活动时间：年底
 11 11 * * * node /scripts/jd_lsj.js >> /scripts/logs/jd_lsj.log 2>&1
-
-# 京东金融-天天拼图
-11 0,15 * * * node /scripts/jd_ttpt.js >> /scripts/logs/jd_ttpt.log 2>&1
 
 ##############长期活动##############
 
