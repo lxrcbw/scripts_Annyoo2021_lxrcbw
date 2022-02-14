@@ -84,6 +84,7 @@ if ($.isNode()) {
 	  await getMs();
 	  await jdfruitRequest('taskInitForFarm', {"version":14,"channel":1,"babelChannel":"120"});
 	  await getjdfruit();
+    await cash();
 	  await TotalMoney();//领现金
 	  await requestAlgo();
 	  await JxmcGetRequest();
@@ -744,6 +745,30 @@ function safeGet(data) {
     console.log(`京东服务器访问数据为空，请检查自身设备网络情况`);
     return false;
   }
+}
+
+function cash() {
+  return new Promise(resolve => {
+    $.get(taskcashUrl('MyAssetsService.execute',
+      {"method": "userCashRecord", "data": {"channel": 1, "pageNum": 1, "pageSize": 20}}),
+      async (err, resp, data) => {
+        try {
+          if (err) {
+            console.log(`${JSON.stringify(err)}`)
+            console.log(`${$.name} API请求失败，请检查网路重试`)
+          } else {
+            if (safeGet(data)) {
+              data = JSON.parse(data);
+              $.JDtotalcash = data.data.goldBalance ;
+            }
+          }
+        } catch (e) {
+          $.logErr(e, resp)
+        } finally {
+          resolve(data);
+        }
+      })
+  })
 }
 
 //领现金
