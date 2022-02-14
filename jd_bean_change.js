@@ -84,7 +84,6 @@ if ($.isNode()) {
 	  await getMs();
 	  await jdfruitRequest('taskInitForFarm', {"version":14,"channel":1,"babelChannel":"120"});
 	  await getjdfruit();
-	  await cash();
 	  await TotalMoney();//领现金
 	  await requestAlgo();
 	  await JxmcGetRequest();
@@ -748,61 +747,92 @@ function safeGet(data) {
 }
 
 //领现金
-function TotalMoney() {
-    return new Promise(resolve => {
-        $.get({
-            url: 'https://api.m.jd.com/client.action?functionId=cash_exchangePage&body=%7B%7D&build=167398&client=apple&clientVersion=9.1.9&openudid=1fce88cd05c42fe2b054e846f11bdf33f016d676&sign=762a8e894dea8cbfd91cce4dd5714bc5&st=1602179446935&sv=102',
-            headers: {
-                Cookie: cookie,
-            }
-        }, async (err, resp, data) => {
-            try {
-                if (err) {
-                    console.log(`${JSON.stringify(err)}`)
-                    console.log(`${$.name} API请求失败，请检查网路重试`)
-                } else {
-                    if (safeGet(data)) {
-                        data = JSON.parse(data);
-                        if (data.code == 0 && data.data.bizCode == 0 && data.data.result) {
-                            $.TotalMoney = data.data.result.totalMoney || 0
-                            //console.log(`京东-总现金查询成功${$.TotalMoney}元\n`)
-                        } else {
-                            console.log(`京东-总现金查询失败 ${data}\n`)
-                        }
-                    }
-                }
-            } catch (e) {
-                $.logErr(e, resp)
-            } finally {
-                resolve(data);
-            }
-        })
-    })
-}
-
-function cash() {
-  return new Promise(resolve => {
-    $.get(taskcashUrl('MyAssetsService.execute',
-      {"method": "userCashRecord", "data": {"channel": 1, "pageNum": 1, "pageSize": 20}}),
-      async (err, resp, data) => {
-        try {
-          if (err) {
-            console.log(`${JSON.stringify(err)}`)
-            console.log(`${$.name} API请求失败，请检查网路重试`)
-          } else {
-            if (safeGet(data)) {
-              data = JSON.parse(data);
-              $.JDtotalcash = data.data.goldBalance ;
+async function TotalMoney() {
+  let functionId = "cash_homePage"
+  let body = {}
+  let sign = await getSign(functionId, body)
+  return new Promise((resolve) => {
+    $.post(apptaskUrl(functionId, sign), async (err, resp, data) => {
+      try {
+        if (err) {
+          console.log(`${JSON.stringify(err)}`)
+          console.log(`${$.name} API请求失败，请检查网路重试`)
+        } else {
+          if (safeGet(data)) {
+            data = JSON.parse(data);
+            if (data.code === 0 && data.data.result) {
+                $.TotalMoney = data.data.result.totalMoney || 0
+            } else {
+              console.log(`京东-总现金查询失败 ${data}\n`)
             }
           }
-        } catch (e) {
-          $.logErr(e, resp)
-        } finally {
-          resolve(data);
         }
-      })
+      } catch (e) {
+        $.logErr(e, resp)
+      } finally {
+        resolve(data);
+      }
+    })
   })
 }
+
+
+function getSign(functionId, body) {
+  return new Promise(async resolve => {
+    let data = {
+      functionId,
+      body: JSON.stringify(body),
+      "client":"apple",
+      "clientVersion":"10.3.0"
+    }
+    let HostArr = ['jdsign.cf', 'signer.nz.lu']
+    let Host = HostArr[Math.floor((Math.random() * HostArr.length))]
+    let options = {
+      url: `https://cdn.nz.lu/ddo`,
+      body: JSON.stringify(data),
+      headers: {
+        Host,
+        "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 13_2_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.0.3 Mobile/15E148 Safari/604.1 Edg/87.0.4280.88"
+      },
+      timeout: 30 * 1000
+    }
+    $.post(options, (err, resp, data) => {
+      try {
+        if (err) {
+          console.log(JSON.stringify(err))
+          console.log(`${$.name} getSign API请求失败，请检查网路重试`)
+        } else {
+
+        }
+      } catch (e) {
+        $.logErr(e, resp)
+      } finally {
+        resolve(data);
+      }
+    })
+  })
+}
+
+
+function apptaskUrl(functionId = "", body = "") {
+  return {
+    url: `https://api.m.jd.com/client.action?functionId=${functionId}`,
+    body,
+    headers: {
+      'Cookie': cookie,
+      'Host': 'api.m.jd.com',
+      'Connection': 'keep-alive',
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'Referer': '',
+      'User-Agent': 'JD4iPhone/167774 (iPhone; iOS 14.7.1; Scale/3.00)',
+      'Accept-Language': 'zh-Hans-CN;q=1',
+      'Accept-Encoding': 'gzip, deflate, br',
+    }
+  }
+}
+
+
+
 
 var __Oxb24bc = ["lite-android&", "stringify", "&android&3.1.0&", "&", "&846c4c32dae910ef", "12aea658f76e453faf803d15c40a72e0", "isNode", "crypto-js", "", "api?functionId=", "&body=", "&appid=lite-android&client=android&uuid=846c4c32dae910ef&clientVersion=3.1.0&t=", "&sign=", "api.m.jd.com", "*/*", "RN", "JDMobileLite/3.1.0 (iPad; iOS 14.4; Scale/2.00)", "zh-Hans-CN;q=1, ja-CN;q=0.9", "undefined", "log", "", "", "", "", "jsjia", "mi.com"];
 
