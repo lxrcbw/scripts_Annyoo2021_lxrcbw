@@ -45,6 +45,11 @@ if ($.isNode()) {
       $.expenseBean = 0;
       $.todayIncomeBean = 0;
       $.todayOutcomeBean = 0;
+      $.jxbeanCount = 0;
+      $.InjxBean = 0;
+      $.OutjxBean = 0;
+      $.todayInjxBean = 0;
+      $.todayOutjxBean = 0;
       $.errorMsg = '';
       $.isLogin = true;
       $.nickName = '';
@@ -89,6 +94,8 @@ if ($.isNode()) {
       await requestAlgo();
       await JxmcGetRequest();
       await bean();
+      await GetJxBeanInfo();
+      await jxbean();
       await getJxFactory();   //京喜工厂
       await showMsg();
     }
@@ -147,9 +154,10 @@ async function showMsg() {
   }
   if ($.JingXiang) ReturnMessage += `${$.JingXiang}\n`;
 
-  ReturnMessage += `今日收支：${$.todayIncomeBean}京豆 🐶 - ${$.todayOutcomeBean}京豆\n`;
-  ReturnMessage += `昨日收支：${$.incomeBean}京豆 🐶 - ${$.expenseBean}京豆\n`;;
-  ReturnMessage += `当前京豆：${$.beanCount}(今日将过期${$.expirejingdou})京豆🐶\n`;
+  ReturnMessage += `今日收入：${$.todayIncomeBean}京豆、 支出: ${$.todayOutcomeBean}京豆\n`;
+  ReturnMessage += `昨日收入：${$.incomeBean}京豆、 支出: ${$.expenseBean}京豆\n`;;
+  ReturnMessage += `当前京豆：${$.beanCount}(今日将过期${$.expirejingdou})京豆\n`;
+  ReturnMessage += `当前喜豆：${$.jxbeanCount}喜豆\n`;
 
   if (typeof $.JDEggcnt !== "undefined") {
     ReturnMessage += `京喜牧场：${$.JDEggcnt}枚鸡蛋\n`;
@@ -168,9 +176,9 @@ async function showMsg() {
   }
   if ($.JdFarmProdName != "") {
     if ($.JdtreeEnergy != 0) {
-      ReturnMessage += `东东农场：${$.JdFarmProdName},进度${(($.JdtreeEnergy / $.JdtreeTotalEnergy) * 100).toFixed(2)}%`;
+      ReturnMessage += `东东农场：${$.JdFarmProdName},${(($.JdtreeEnergy / $.JdtreeTotalEnergy) * 100).toFixed(2)}%`;
       if ($.JdwaterD != 'Infinity' && $.JdwaterD != '-Infinity') {
-        ReturnMessage += `,${$.JdwaterD === 1 ? '明天' : $.JdwaterD === 2 ? '后天' : $.JdwaterD + '天后'}可兑🍉\n`;
+        ReturnMessage += `,${$.JdwaterD === 1 ? '明天' : $.JdwaterD === 2 ? '后天' : $.JdwaterD + '天后'}可兑\n`;
       } else {
         ReturnMessage += `\n`;
       }
@@ -185,13 +193,13 @@ async function showMsg() {
     $.petInfo = initPetTownRes.result;
     if (response.resultCode === '0') {
       ReturnMessage += `东东萌宠：${$.petInfo.goodsInfo.goodsName},`;
-      ReturnMessage += `勋章${response.result.medalNum}/${response.result.medalNum + response.result.needCollectMedalNum}块(${response.result.medalPercent}%)\n`;
+      ReturnMessage += `${response.result.medalNum}/${response.result.medalNum + response.result.needCollectMedalNum}块,${((response.result.medalPercent / 100 + response.result.medalNum) / (response.result.medalNum + response.result.needCollectMedalNum) * 100).toFixed(2)}%\n`;
       //ReturnMessage += `          已有${response.result.medalNum}块勋章，还需${response.result.needCollectMedalNum}块\n`;
     }
   }
 
   if ($.jxFactoryInfo) {
-    ReturnMessage += `京喜工厂：${$.jxFactoryInfo}🏭\n`
+    ReturnMessage += `京喜工厂：${$.jxFactoryInfo}\n`
   }
 
   ReturnMessage += `🧧🧧🧧🧧红包明细🧧🧧🧧🧧`;
@@ -275,6 +283,123 @@ async function bean() {
   // console.log(`昨日收入：${$.incomeBean}个京豆 🐶`);
   // console.log(`昨日支出：${$.expenseBean}个京豆 🐶`)
 }
+
+function GetJxBeanInfo() {
+  return new Promise((resolve) => {
+    $.get(taskJxUrl("querybeanamount"), async (err, resp, data) => {
+      try {
+        if (err) {
+          console.log(JSON.stringify(err));
+          console.log(`GetJxBeanInfo请求失败，请检查网路重试`);
+        } else {
+          data = JSON.parse(data.match(new RegExp(/jsonpCBK.?\((.*);*/))[1]);
+          if (data) {
+            if (data.errcode == 0) {
+              $.jxbeanCount = data.data.xibean;
+              if (!$.beanCount) {
+                $.beanCount = data.data.jingbean;
+              }
+            }
+          }
+        }
+      } catch (e) {
+        $.logErr(e, resp);
+      } finally {
+        resolve(data);
+      }
+    });
+  });
+}
+async function jxbean() {
+  //前一天的0:0:0时间戳
+  const tm = parseInt((Date.now() + 28800000) / 86400000) * 86400000 - 28800000 - (24 * 60 * 60 * 1000);
+  // 今天0:0:0时间戳
+  const tm1 = parseInt((Date.now() + 28800000) / 86400000) * 86400000 - 28800000;
+  var JxYesterdayArr = [],
+    JxTodayArr = [];
+  var JxResponse = await GetJxBeanDetailData();
+  if (JxResponse && JxResponse.ret == "0") {
+    var Jxdetail = JxResponse.detail;
+    if (Jxdetail && Jxdetail.length > 0) {
+      for (let item of Jxdetail) {
+        const date = item.createdate.replace(/-/g, '/') + "+08:00";
+        if (new Date(date).getTime() >= tm1 && (!item['visibleinfo'].includes("退还") && !item['visibleinfo'].includes('扣赠'))) {
+          JxTodayArr.push(item);
+        } else if (tm <= new Date(date).getTime() && new Date(date).getTime() < tm1 && (!item['visibleinfo'].includes("退还") && !item['visibleinfo'].includes('扣赠'))) {
+          //昨日的
+          JxYesterdayArr.push(item);
+        } else if (tm > new Date(date).getTime()) {
+          break;
+        }
+      }
+    } else {
+      $.errorMsg = `数据异常`;
+      $.msg($.name, ``, `账号${$.index}：${$.nickName}\n${$.errorMsg}`);
+    }
+    for (let item of JxYesterdayArr) {
+      if (Number(item.amount) > 0) {
+        $.InjxBean += Number(item.amount);
+      } else if (Number(item.amount) < 0) {
+        $.OutjxBean += Number(item.amount);
+      }
+    }
+    for (let item of JxTodayArr) {
+      if (Number(item.amount) > 0) {
+        $.todayInjxBean += Number(item.amount);
+      } else if (Number(item.amount) < 0) {
+        $.todayOutjxBean += Number(item.amount);
+      }
+    }
+    $.todayOutjxBean = -$.todayOutjxBean;
+    $.OutjxBean = -$.OutjxBean;
+  }
+}
+
+
+function taskJxUrl(functionId, body = '') {
+  let url = ``;
+  var UA = `jdpingou;iPhone;4.13.0;14.4.2;${randomString(40)};network/wifi;model/iPhone10,2;appBuild/100609;supportApplePay/1;hasUPPay/0;pushNoticeIsOpen/1;hasOCPay/0;supportBestPay/0;session/${Math.random * 98 + 1};pap/JA2019_3111789;brand/apple;supportJDSHWK/1;Mozilla/5.0 (iPhone; CPU iPhone OS 14_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148`;
+
+  if (body) {
+    url = `https://m.jingxi.com/activeapi/${functionId}?${body}`;
+    url += `&_=${Date.now() + 2}&sceneval=2&g_login_type=1&callback=jsonpCBK${String.fromCharCode(Math.floor(Math.random() * 26) + "A".charCodeAt(0))}&g_ty=ls`;
+  } else {
+    url = `https://m.jingxi.com/activeapi/${functionId}?_=${Date.now() + 2}&sceneval=2&g_login_type=1&callback=jsonpCBK${String.fromCharCode(Math.floor(Math.random() * 26) + "A".charCodeAt(0))}&g_ty=ls`;
+  }
+  return {
+    url,
+    headers: {
+      "Host": "m.jingxi.com",
+      "Accept": "*/*",
+      "Accept-Encoding": "gzip, deflate, br",
+      "User-Agent": UA,
+      "Accept-Language": "zh-CN,zh-Hans;q=0.9",
+      "Referer": "https://st.jingxi.com/",
+      "Cookie": cookie
+    }
+  }
+}
+
+function GetJxBeanDetailData() {
+  return new Promise((resolve) => {
+    $.get(taskJxUrl("queryuserjingdoudetail", "pagesize=10&type=16"), async (err, resp, data) => {
+      try {
+        if (err) {
+          console.log(JSON.stringify(err));
+          console.log(`GetJxBeanDetailData请求失败，请检查网路重试`);
+        } else {
+          data = JSON.parse(data.match(new RegExp(/jsonpCBK.?\((.*);*/))[1]);
+
+        }
+      } catch (e) {
+        $.logErr(e, resp);
+      } finally {
+        resolve(data);
+      }
+    });
+  });
+}
+
 
 function TotalBean() {
   return new Promise(async resolve => {
@@ -513,7 +638,7 @@ function redPacket() {
             $.jdhRed = $.jdhRed.toFixed(2)
             $.balance = data.balance
             $.expiredBalance = ($.jxRedExpire + $.jsRedExpire + $.jdRedExpire).toFixed(2)
-            $.message += `\n当前总红包：${$.balance}(今日总过期${$.expiredBalance})元 🧧\n京喜红包：${$.jxRed}(今日将过期${$.jxRedExpire.toFixed(2)})元 🧧\n极速红包：${$.jsRed}(今日将过期${$.jsRedExpire.toFixed(2)})元 🧧\n京东红包：${$.jdRed}(今日将过期${$.jdRedExpire.toFixed(2)})元 🧧\n健康红包：${$.jdhRed}(今日将过期${$.jdhRedExpire.toFixed(2)})元 🧧`;
+            $.message += `\n当前总红包：${$.balance}(今日总过期${$.expiredBalance})元\n京喜红包：${$.jxRed}(今日将过期${$.jxRedExpire.toFixed(2)})元\n极速红包：${$.jsRed}(今日将过期${$.jsRedExpire.toFixed(2)})元\n京东红包：${$.jdRed}(今日将过期${$.jdRedExpire.toFixed(2)})元\n健康红包：${$.jdhRed}(今日将过期${$.jdhRedExpire.toFixed(2)})元`;
           } else {
             console.log(`京东服务器返回空数据`)
           }
@@ -956,30 +1081,30 @@ function getJxFactory() {
                 $.commodityDimId = production.commodityDimId;
                 // subTitle = data.user.pin;
                 await GetCommodityDetails();//获取已选购的商品信息
-                infoMsg = `${$.jxProductName} ,进度:${((production.investedElectric / production.needElectric) * 100).toFixed(2)}%`;
+                infoMsg = `${$.jxProductName} ,${((production.investedElectric / production.needElectric) * 100).toFixed(2)}%`;
                 if (production.investedElectric >= production.needElectric) {
                   if (production['exchangeStatus'] === 1) {
-                    infoMsg = `${$.jxProductName} ,已经可兑换，请手动兑换`;
+                    infoMsg = `${$.jxProductName} ,已可兑换‼️`;
                   }
                   if (production['exchangeStatus'] === 3) {
                     if (new Date().getHours() === 9) {
-                      infoMsg = `${$.jxProductName} ,兑换已超时，请选择新商品进行制造`;
+                      infoMsg = `${$.jxProductName} ,兑换已超时‼️`;
                     }
                   }
                   // await exchangeProNotify()
                 } else {
-                  infoMsg += ` ,预计:${((production.needElectric - production.investedElectric) / (2 * 60 * 60 * 24)).toFixed(2)}天可兑换`
+                  infoMsg += ` ,${((production.needElectric - production.investedElectric) / (2 * 60 * 60 * 24)).toFixed(2)}天可兑`
                 }
                 if (production.status === 3) {
-                  infoMsg = "${$.jxProductName} ,已经超时失效, 请选择新商品进行制造"
+                  infoMsg = `${$.jxProductName} ,已超时失效‼️`
                 }
               } else {
                 $.unActive = false;//标记是否开启了京喜活动或者选购了商品进行生产
                 if (!data.factoryList) {
-                  infoMsg = "当前未开始生产商品,请手动去京喜APP->我的->京喜工厂 开启活动"
+                  infoMsg = "未生产商品"
                   // $.msg($.name, '【提示】', `京东账号${$.index}[${$.nickName}]京喜工厂活动未开始\n请手动去京喜APP->我的->京喜工厂 开启活动`);
                 } else if (data.factoryList && !data.productionList) {
-                  infoMsg = "当前未开始生产商品,请手动去京喜APP->我的->京喜工厂 开启活动"
+                  infoMsg = "未生产商品"
                 }
               }
             }
